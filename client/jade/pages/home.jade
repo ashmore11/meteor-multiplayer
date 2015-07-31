@@ -1,0 +1,41 @@
+template( name="home" )
+
+	#home.page
+
+		//- #players
+
+		//- 	each users
+
+		//- 		.player( 
+		//- 			id="{{ _id }}" 
+		//- 			style="top: #{position.y}%; left: #{position.x}%;" 
+		//- 		)
+		//- 			span.direction(
+		//- 				style="-webkit-transform: rotate(#{lookAngle}deg)"
+		//- 			)
+		//- 			span.name {{ username }}
+		//- 			span.health {{ health }}
+
+		//- #bullets
+
+		//- 	each bullets
+
+		//- 		.bullet( 
+		//- 			id="#{_id}" 
+		//- 			data-user-id="#{user}" 
+		//- 			style="top: #{y}%; left: #{x}%;"
+		//- 		)
+
+		#scene
+
+		if noUsername
+
+			form.username
+
+				.enter-name
+					h1 WELCOME!
+					span PLEASE CREATE A USERNAME BELOW
+
+				input( type="text" name="text" maxlength="12" )
+
+				button.disabled( type="submit" ).save-name SAVE

@@ -1,0 +1,26 @@
+@import 'nib'
+
+#not_found
+	
+	.text
+		position : absolute
+		top      : 50%
+		left     : 0
+		margin   : -12px 0 0
+		width    : 100%
+		font-size: 24px
+		animation: grow 1.5s infinite ease-in-out
+		
+	@keyframes grow
+		
+		0%
+			transform : scale( 1 )
+			opacity   : 1
+			
+		50%
+			transform : scale( 0.95 )
+			opacity   : 0.5
+			
+		100%
+			transform : scale( 1 )
+			opacity   : 1

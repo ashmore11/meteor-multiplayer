@@ -1,0 +1,232 @@
+@import 'nib'
+
+#race
+	
+	h1
+		display         : block
+		background-color: #111
+		padding         : 15px
+		color           : white
+		font-size       : 20px
+		text-align      : center
+		letter-spacing  : 4px
+		
+	.no-users
+		absolute  : top 50% left 50%
+		transform : translate(-50%, -60%)
+		width     : 70%
+		background: linear-gradient( top, #333, #111 )
+		box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5)
+
+		h2
+			text-align: center
+			color     : white
+			padding   : 15px 30px
+			
+			span
+				display: block
+				margin : 10px 0
+				line-height: 24px
+		
+	.stats
+		position     : relative
+		border-bottom: 4px solid #111
+		font-size    : 0
+		text-align   : center
+		
+		.speed
+		.accuracy
+			font-size: 12px
+			display  : inline-block
+			width    : 50%
+			padding  : 10px 0
+			
+		.splitter
+			absolute        : top left 50%
+			width           : 4px
+			height          : 100%
+			background-color: #111
+		
+	ul.users
+		
+		li.user
+			position     : relative
+			padding      : 8px 0
+			border-bottom: 1px solid rgba(0,0,0,0.1)
+			
+			&:nth-child(odd)
+				background-color: rgba(0,0,0,0.2)
+			
+			&:nth-child(even)
+				background-color: rgba(0,0,0,0.1)
+				
+			a
+				display: block
+			
+			img
+				width         : 34px
+				border-radius : 999px
+				vertical-align: middle
+				margin-right  : 5px
+			
+			span
+				text-transform: uppercase
+				vertical-align: middle
+				font-size     : 20px
+				letter-spacing: 1px
+				
+			.profile
+				display    : inline-block
+				margin-left: 20px
+				
+			.distance
+				display     : inline-block
+				float       : right
+				margin-top  : 7px
+				margin-right: 40px
+				
+			.arrow
+				absolute : top 50% right 20px
+				transform: translateY(-50%)
+				
+				.line
+					width           : 2px
+					height          : 10px
+					background-color: #111
+					
+					&:nth-child(1)
+						transform: rotate(-45deg) translateY(3px)
+						
+					&:nth-child(2)
+						transform: rotate(45deg) translateY(-3px)
+	
+	.map-container
+		absolute  : top left
+		width     : 100%
+		height    : 100%
+		box-shadow: 0 -2px 20px rgba(0,0,0,0.5)
+		z-index   : 1
+		transform : translate3d(100.1%, 0, 0)
+		transition: transform 1s cubic-bezier( 0.23, 1, 0.32, 1 )
+		transition-delay: 0.35s
+		
+		&.active
+			transform : translate3d(0, 0, 0)
+			transition-delay: 0s
+			
+			
+			.map-user .distance
+				transform: translateY(0)
+				transition-delay: 0.75s
+			
+		.map-user
+			absolute: top left
+			width   : 100%
+			z-index : 2
+			text-align: center
+			
+			.distance
+				display       : block
+				padding       : 16px
+				color         : white
+				font-size     : 14px
+				color         : greenyellow
+				letter-spacing: 2px
+				background    : linear-gradient( top, rgba(0,0,0,0.5), rgba(0,0,0,0.6), rgba(0,0,0,0.5) )
+				border-top    : 1px solid greenyellow
+				transform     : translateY(-100%)
+				transition    : transform 0.5s cubic-bezier( 0.23, 1, 0.32, 1 )
+				
+	.invite-friends-overlay
+		absolute  : top 50% left 50%
+		transform : translate(-50%, -40%)
+		width     : 80%
+		color     : white
+		visibility: hidden
+		opacity   : 0
+		
+		ul.friends
+			border                    : 1px solid #111
+			max-height                : 250px
+			overflow                  : scroll
+			-webkit-overflow-scrolling: touch
+			
+			li.friend
+				position     : relative
+				padding      : 15px 0
+				border-bottom: 1px solid #222
+				width        : 100%
+				margin       : 0
+				text-align   : center
+				
+				&:nth-child(odd)
+					background-color: rgba(0,0,0,0.9)
+					
+				&:nth-child(even)
+					background-color: rgba(0,0,0,0.9)
+				
+				&:active
+					box-shadow: inset 0px 0px 10px 0px rgba(0,0,0,0.5)
+					
+				&.selected
+					background-color: white
+					color           : black
+				
+				img
+					width         : 34px
+					border-radius : 999px
+					vertical-align: middle
+					margin-right  : 5px
+					margin-left   : 1%
+				
+				span
+					text-transform: uppercase
+					vertical-align: middle
+					font-size     : 14px
+					letter-spacing: 1px
+					
+		.send-invite-btn
+			width     : 100%
+			margin-top: 10px
+			padding   : 20px 0
+			color     : white
+			background: linear-gradient( top, #333, #111 )
+			box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5)
+			text-align: center
+			
+			&:active
+				box-shadow: inset 0px 0px 10px 0px rgba(0,0,0,0.5)
+	
+	.join-race-btn.not-in-race
+		absolute  : bottom left
+		width     : 98%
+		padding   : 20px 0
+		color     : white
+		background: linear-gradient( top, #333, #111 )
+		box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5)
+		margin    : 1%
+		text-align: center
+		
+		&:active
+			box-shadow: inset 0px 0px 10px 0px rgba(0,0,0,0.5)
+		
+	.bottom-buttons
+		absolute  : bottom left
+		width     : 98%
+		margin    : 1% 1% 4px 1%
+		
+		.join-race-btn
+		.invite-friends-btn
+			width     : 49.5%
+			padding   : 20px 0
+			color     : white
+			background: linear-gradient( top, #333, #111 )
+			box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5)
+			text-align: center
+			float     : left
+			
+			&:active
+				box-shadow: inset 0px 0px 10px 0px rgba(0,0,0,0.5)
+			
+		.invite-friends-btn
+			float: right

@@ -1,0 +1,71 @@
+@import 'nib'
+
+#races
+	
+	h1
+		padding         : 15px
+		text-transform  : uppercase
+		color           : white
+		font-size       : 20px
+		text-align      : center
+		
+	.distance-selector
+		width        : 98%
+		margin       : 1%
+		position     : relative
+		box-shadow     : 0 0 2px 0 black
+
+		.distance
+			width     : 33.33%
+			padding   : 15px 0
+			float     : left
+			text-align: center
+			color     : greenyellow
+			background: linear-gradient( top, #333, rgba(0,0,0,0.9) )
+			
+			&:nth-child(1)
+			&:nth-child(2)
+				box-shadow: 1px 0px 0 rgba(255,255,255,1)
+			
+			&.selected
+				background: linear-gradient( top, white, rgba(255,255,255,0.5) )
+				color     : black
+			
+		.clear
+			clear: both
+	
+	ul.races
+		
+		li.race
+			background     : linear-gradient( top, #222, rgba(0,0,0,0.9) )
+			color          : white
+			width          : 98%
+			margin         : 1% 1% 0 1%
+			text-align     : center
+			letter-spacing : 2px
+			display        : flex
+			flex-flow      : column wrap
+			justify-content: center
+			align-items    : center
+			box-shadow     : 0 0 2px 0 black
+			height         : 24%
+			
+			&:active
+				box-shadow: inset 0 0 10px 0 black
+			
+			span
+				display: block
+				
+				&.time
+					margin-bottom : 10px
+					letter-spacing: 8px
+					
+				&.competitors
+					font-size    : 10px
+					margin-bottom: 10px
+					color        : lightskyblue
+				
+				&.countdown
+					font-size: 10px
+					color    : greenyellow
+				
