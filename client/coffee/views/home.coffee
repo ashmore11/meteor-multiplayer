@@ -55,14 +55,14 @@ class Scene
 
     @addCurrentUsers()
     @createUsers()
+    @removeUsers()
     @addBulletsToStage()
+    @removeBulletsFromStage()
     @animate()
 
   getKeyEvents: ( event ) =>
 
-    user = Players.find( 'username': Session.get('user') ).fetch()[0]
-
-    return unless user
+    return unless @user
 
     event.preventDefault()
 
@@ -88,34 +88,53 @@ class Scene
 
     for player in Players.find().fetch()
 
-      id   = player._id
-      name = player.username
-      x    = player.position.x
-      y    = player.position.y
+      id     = player._id
+      name   = player.username
+      color  = player.color
+      health = player.health
+      x      = player.position.x
+      y      = player.position.y
 
-      @generatePlayer id, name, x, y
+      @generatePlayer id, name, color, health, x, y
 
   createUsers: =>
 
-    PlayerStream.on 'user:created', ( id, name ) =>
+    PlayerStream.on 'user:created', ( id, name, color ) =>
 
-      @generatePlayer id, name
+      @generatePlayer id, name, color
 
-  generatePlayer: ( id, name, x, y ) ->
+  removeUsers: ( id ) =>
+
+    PlayerStream.on 'destroy:player', ( id ) =>
+
+      for child in @stage.children
+
+        return unless child
+
+        if child._id is id
+
+          child.removeChildren()
+          @stage.removeChild child
+
+  generatePlayer: ( id, name, color, health, x, y ) ->
 
     circle = new PIXI.Graphics
-    circle.beginFill 0xFFCC00, 1
+    circle.beginFill "0x#{color}", 1
     circle.drawCircle 0, 0, 20
 
     cannon = new PIXI.Graphics
-    cannon.beginFill 0xFFCC00, 1
+    cannon.beginFill "0x#{color}", 1
     cannon.drawRect -2, 5, 6, -30
     cannon.type = 'cannon'
 
-    text = new PIXI.Text name, font: '12px Oswald', fill: 'white'
-    text.rotation = 0
-    text.x = -( text.width / 2 )
-    text.y = -50
+    name = new PIXI.Text name, font: '12px Oswald', fill: 'white'
+    name.x = -( name.width / 2 )
+    name.y = -50
+
+    health = new PIXI.Text ( health or 100 ), font: '12px Oswald', fill: 'black'
+    health.x = -( health.width / 2 )
+    health.y = -( health.height / 2 )
+    health.type = 'health'
 
     user      = new PIXI.Container
     user._id  = id
@@ -126,34 +145,40 @@ class Scene
       user.x = x
       user.y = y
 
+    else
+
+      user.x = 750
+      user.y = 500
+
     user.addChild circle
     user.addChild cannon
-    user.addChild text
+    user.addChild name
+    user.addChild health
 
     @stage.addChild user
 
   createBullet: ( event ) =>
 
-    user = Players.find( 'username': Session.get('user') ).fetch()[0]
-
-    return unless user
+    return unless @user
 
     event.preventDefault()
 
     pageX = event.pageX - @el.offset().left
     pageY = event.pageY - @el.offset().top
-    pos   = user.position
+    pos   = @user.position
 
     angle   = Math.atan2( pageX - pos.x, - ( pageY - pos.y ) ) * ( 180 / Math.PI )
     radians = angle * Math.PI / 180
     speed   = 500
 
     params =
+      user : @user._id
       uid  : Random.id()
-      x    : user.position.x
-      y    : user.position.y
+      x    : @user.position.x
+      y    : @user.position.y
       vx   : Math.cos( radians ) * speed / 60
       vy   : Math.sin( radians ) * speed / 60
+      color: @user.color
 
     BulletStream.emit 'create:bullet', params
 
@@ -163,7 +188,7 @@ class Scene
 
       circle = new PIXI.Graphics
 
-      circle.beginFill 0xFFCC00, 1
+      circle.beginFill "0x#{doc.color}", 1
       circle.drawCircle 0, 0, 2
 
       bullet = new PIXI.Container
@@ -178,33 +203,40 @@ class Scene
 
       @stage.addChild bullet
 
+  removeBulletsFromStage: ->
+
+    BulletStream.on 'destroy:bullet', ( id ) =>
+
+      for child in @stage.children
+
+        return unless child
+
+        if child._id is id
+
+          child.removeChildren()
+          @stage.removeChild child
+
   getRotateAngle: ( event ) =>
 
-    user = Players.find( 'username': Session.get('user') ).fetch()[0]
-
-    return unless user
+    return unless @user
 
     pageX = event.pageX - @el.offset().left
     pageY = event.pageY - @el.offset().top
 
-    x = pageX - user.position.x
-    y = pageY - user.position.y
+    x = pageX - @user.position.x
+    y = pageY - @user.position.y
 
     angle   = Math.atan2( x, -y ) * ( 180 / Math.PI )
     radians = angle * Math.PI / 180
 
-    id = Players.find( 'username': Session.get('user') ).fetch()[0]._id
-
-    Meteor.call 'updateRotation', id, radians
+    Meteor.call 'updateRotation', @user._id, radians
 
   updateUserPosition: ->
 
-    user = Players.find( 'username': Session.get('user') ).fetch()[0]
+    return unless @user
 
-    return unless user
-
-    x = user.position.x
-    y = user.position.y
+    x = @user.position.x
+    y = @user.position.y
 
     x -= 5 if Session.get 'move:left'
     y -= 5 if Session.get 'move:up'
@@ -221,7 +253,25 @@ class Scene
       x: x
       y: y
 
-    Meteor.call 'updatePosition', user._id, pos
+    Meteor.call 'updatePosition', @user._id, pos
+
+  updateBullets: ->
+
+    for bullet in Bullets.find().fetch()
+
+      if bullet.user is @user?._id
+
+        x = bullet.position.x
+        y = bullet.position.y
+
+        x += bullet.direction.y
+        y -= bullet.direction.x
+
+        pos =
+          x: x
+          y: y
+
+        Meteor.call 'updateBullets', bullet._id, pos
 
   updatePlayersAndBullets: ->
 
@@ -242,25 +292,27 @@ class Scene
             
               ch.rotation = player.rotation
 
+            if ch.type is 'health'
+
+              ch.text = player.health
+              ch.x = -( ch.width / 2 )
+              ch.y = -( ch.height / 2 )
+
       if child?.type is 'bullet'
 
         bullet = Bullets.findOne( _id: child._id )
 
         if bullet
 
-          child.x += bullet.direction.y
-          child.y -= bullet.direction.x
-
-          if child.x > @renderer.width or child.x < 0 or child.y > @renderer.height or child.y < 0
-
-            child.removeChildren()
-            @stage.removeChild child
-
-            Meteor.call 'removeBullet', child._id
+          child.x = bullet.position.x
+          child.y = bullet.position.y
 
   update: ->
 
+    @user = Players.findOne( username: Session.get 'user' )
+
     @updateUserPosition()
+    @updateBullets()
     @updatePlayersAndBullets()
 
   animate: =>
