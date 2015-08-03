@@ -110,6 +110,7 @@ class Scene
     cannon = new PIXI.Graphics
     cannon.beginFill 0xFFCC00, 1
     cannon.drawRect -2, 5, 6, -30
+    cannon.type = 'cannon'
 
     text = new PIXI.Text name, font: '12px Oswald', fill: 'white'
     text.rotation = 0
@@ -234,7 +235,12 @@ class Scene
 
           child.x = player.position.x
           child.y = player.position.y
-          child.rotation = player.rotation
+
+          for ch in child.children
+            
+            if ch.type is 'cannon'
+            
+              ch.rotation = player.rotation
 
       if child?.type is 'bullet'
 
