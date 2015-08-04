@@ -2,7 +2,7 @@ Template.home.helpers
 
   noUsername: ->
 
-    return Players.find( 'username': Session.get('user') ).fetch().length < 1
+    return Players.find( username: Session.get('user') ).count() < 1
 
   players: ->
 
@@ -12,13 +12,20 @@ Template.home.helpers
 
     return Bullets.find().count()
 
+  health: ->
+
+    return Players.findOne( username: Session.get('user') ).health
+
 Template.home.events
 
   'keyup input': ( event ) ->
 
     if $('input').val().length >= 3
+
       $('button').removeClass 'disabled'
+
     else
+
       $('button').addClass 'disabled'
 
   'submit .username': ( event ) =>
@@ -332,7 +339,7 @@ class Scene
         else
 
           # Remove any bullets that leave the clients ui
-          if ox > 1500 or ox < 0 or oy > 1000 or oy < 0
+          if ox > @renderer.width or ox < 0 or oy > @renderer.height or oy < 0
 
             Meteor.call 'removeBullet', object._id
 

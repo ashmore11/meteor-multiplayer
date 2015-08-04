@@ -65,16 +65,6 @@ Meteor.methods
         x: params.vx
         y: params.vy
 
-  updateBullets: ( id, pos ) ->
-
-    @unblock()
-
-    Bullets.update _id: id,
-
-      $set: 
-        
-        position: pos
-
   removeBullet: ( id ) ->
 
     Bullets.remove id
