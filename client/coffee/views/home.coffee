@@ -40,7 +40,10 @@ Template.home.events
 
       else
 
-        Meteor.call 'createPlayer', name, randomColor( luminosity: 'bright' )
+        color = randomColor( luminosity: 'bright' )
+        color = color.split('#')[1]
+
+        Meteor.call 'createPlayer', name, color
 
         Session.set 'user', name
 
@@ -61,6 +64,8 @@ class Scene
 
     @renderer = new PIXI.WebGLRenderer 1500, 1000, antialias: true
     @stage    = new PIXI.Container
+
+    PIXI.RESOLUTION = window.devicePixelRatio
 
     @el.append @renderer.view
     @el.append @stats.domElement
@@ -125,7 +130,7 @@ class Scene
 
     PlayerStream.on 'player:destroyed', ( id ) =>
 
-      object = @getObjectFromScene( id )
+      object = @getObjectFromStage( id )
 
       return unless object
 
@@ -156,11 +161,12 @@ class Scene
     cannon.drawRect -2, 5, 6, -30
     cannon.type = 'cannon'
 
-    name = new PIXI.Text name, font: '12px Oswald', fill: 'white'
+    name = new PIXI.Text name, font: '14px Avenir Next Condensed', fill: 'white'
     name.x = -( name.width / 2 )
-    name.y = -50
+    name.y = -45
+    name.resolution = 100
 
-    health = new PIXI.Text ( health or 100 ), font: '12px Oswald', fill: 'black'
+    health = new PIXI.Text ( health or 100 ), font: '14px Avenir Next Condensed', fill: 'black'
     health.x = -( health.width / 2 )
     health.y = -( health.height / 2 )
     health.type = 'health'
@@ -168,8 +174,8 @@ class Scene
     user       = new PIXI.Container
     user._id   = id
     user.type  = 'player'
-    user.x     = x or 750
-    user.y     = y or 500
+    user.x     = x or @renderer.width / 2
+    user.y     = y or @renderer.height / 2
 
     user.addChild circle
     user.addChild cannon
@@ -185,10 +191,12 @@ class Scene
     x = @user.position.x
     y = @user.position.y
 
-    x -= 5 if Session.get 'move:left'
-    y -= 5 if Session.get 'move:up'
-    x += 5 if Session.get 'move:right'
-    y += 5 if Session.get 'move:down'
+    speed = 7.5
+
+    x -= speed if Session.get 'move:left'
+    y -= speed if Session.get 'move:up'
+    x += speed if Session.get 'move:right'
+    y += speed if Session.get 'move:down'
 
     if x < 20 then x = 20
     if y < 20 then y = 20
@@ -214,7 +222,7 @@ class Scene
 
     angle   = Math.atan2( pageX - pos.x, - ( pageY - pos.y ) ) * ( 180 / Math.PI )
     radians = angle * Math.PI / 180
-    speed   = 1500
+    speed   = 1000
 
     params =
       user : @user._id
@@ -239,7 +247,12 @@ class Scene
       bullet.x    = doc.position.x
       bullet.y    = doc.position.y
       bullet._id  = id
+      bullet.user = doc.user
       bullet.type = 'bullet'
+
+      bullet.direction =
+        x: doc.direction.x
+        y: doc.direction.y
 
       bullet.addChild circle
       @stage.addChild bullet
@@ -248,7 +261,7 @@ class Scene
 
     BulletStream.on 'bullet:destroyed', ( id ) =>
 
-      object = @getObjectFromScene( id )
+      object = @getObjectFromStage( id )
 
       return unless object
 
@@ -257,26 +270,12 @@ class Scene
 
   updateBullets: ->
 
-    return unless @user
+    for object in @stage.children
 
-    px = @user.position.x
-    py = @user.position.y
+      if object.type is 'bullet'
 
-    for bullet in Bullets.find().fetch()
-
-      x = bullet.position.x
-      y = bullet.position.y
-
-      if bullet.user is @user?._id
-
-        x += bullet.direction.y
-        y -= bullet.direction.x
-
-        pos =
-          x: x
-          y: y
-
-        Meteor.call 'updateBullets', bullet._id, pos
+        object.x = object.x + object.direction.y
+        object.y = object.y - object.direction.x
 
   updateObjectsOnStage: ->
 
@@ -300,17 +299,8 @@ class Scene
           if child.type is 'health'
 
             child.text = player.health
-            child.x    = -( child.width / 2 )
-            child.y    = -( child.height / 2 )
-
-      if object?.type is 'bullet'
-
-        bullet = Bullets.findOne( _id: object._id )
-
-        return unless bullet
-
-        object.x = bullet.position.x
-        object.y = bullet.position.y
+            child.x = -( child.width / 2 )
+            child.y = -( child.height / 2 )
 
   collisionDetection: ->
 
@@ -319,37 +309,43 @@ class Scene
     px = @user.position.x
     py = @user.position.y
 
-    for bullet in Bullets.find().fetch()
+    for object in @stage.children
 
-      x = bullet.position.x
-      y = bullet.position.y
+      if object.type is 'bullet'
 
-      if bullet.user is @user?._id
+        ox = object.x
+        oy = object.y
 
-        if x > 1500 or x < 0 or y > 1000 or y < 0
+        # Dont check for collision if bullet belongs to @user
+        unless object.user is @user._id
+
+          if ox > px - 20 and ox < px + 20 and oy > py - 20 and oy < py + 20
+
+            # Increase the health of the player who shot the bullet by 5
+            Meteor.call 'increaseHealth', object.user
+
+            # Decrease the health of the player who was shot by 10
+            Meteor.call 'decreaseHealth', @user._id
+
+            # Remove the bullet from the collection and clients ui
+            Meteor.call 'removeBullet', object._id
+
+        else
 
           # Remove any bullets that leave the clients ui
-          Meteor.call 'removeBullet', bullet._id
+          if ox > 1500 or ox < 0 or oy > 1000 or oy < 0
 
-      else
+            Meteor.call 'removeBullet', object._id
 
-        if x > px - 20 and x < px + 20 and y > py - 20 and y < py + 20
+  removeDeadPlayer: ->
 
-          # Increase the health of the player who shot the bullet by 5
-          Meteor.call 'increaseHealth', bullet.user
+    return unless @user
 
-          # Decrease the health of the player who was shot by 10
-          Meteor.call 'decreaseHealth', @user._id
+    if @user.health <= 0
 
-          # Remove the bullet from the collection and clients ui
-          Meteor.call 'removeBullet', bullet._id
+      Meteor.call 'removePlayer', @user._id
 
-          # Remove dead players from the collection and clients ui
-          if @user.health <= 10
-
-            Meteor.call 'removePlayer', @user._id
-
-  getObjectFromScene: ( id ) ->
+  getObjectFromStage: ( id ) ->
 
     for child in @stage.children
 
@@ -368,6 +364,8 @@ class Scene
     @updateObjectsOnStage()
 
     @collisionDetection()
+
+    @removeDeadPlayer()
 
   animate: ( time ) =>
 

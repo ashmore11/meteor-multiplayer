@@ -8,28 +8,11 @@ class @AppRouter
 
 		waitOn: ->
 			
-			Meteor.subscribe 'user'
-			Meteor.subscribe 'users'
 			Meteor.subscribe 'players'
 			Meteor.subscribe 'bullets'
 
-		onBeforeAction: ->
-
-			if Meteor.userId()
-
-				do @next
-
-			else
-
-				@redirect '/'
-
-				do @next
-
 	Router.map ->
 
-		### 
-		@ROUTE HOME
-		###
 		@route 'home',
 			path: '/'
 			

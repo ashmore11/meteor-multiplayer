@@ -2,14 +2,17 @@ Meteor.methods
 
   createPlayer: ( name, color ) ->
 
-    color = color.split('#')[1]
-
     Players.insert
+
       username : name
       position : x: 750, y: 500
       rotation : 0
       color    : color
       health   : 100
+
+  removePlayer: ( id ) ->
+
+    Players.remove id
 
   updatePosition: ( id, pos ) ->
 
@@ -31,11 +34,27 @@ Meteor.methods
         
         rotation: angle
 
+  increaseHealth: ( id ) ->
+
+    Players.update _id: id,
+
+      $inc: 
+
+        health: 5
+
+  decreaseHealth: ( id ) ->
+
+    Players.update _id: id,
+
+      $inc: 
+
+        health: -10
+
   createBullet: ( params ) ->
 
     Bullets.insert
 
-      user: params.user
+      user : params.user
       color: params.color
 
       position:
@@ -59,23 +78,3 @@ Meteor.methods
   removeBullet: ( id ) ->
 
     Bullets.remove id
-
-  increaseHealth: ( id ) ->
-
-    Players.update _id: id,
-
-      $inc: 
-
-        health: 5
-
-  decreaseHealth: ( id ) ->
-
-    Players.update _id: id,
-
-      $inc: 
-
-        health: -10
-
-  removePlayer: ( id ) ->
-
-    Players.remove id
