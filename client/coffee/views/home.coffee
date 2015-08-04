@@ -161,21 +161,20 @@ class Scene
     cannon.drawRect -2, 5, 6, -30
     cannon.type = 'cannon'
 
-    name = new PIXI.Text name, font: '14px Avenir Next Condensed', fill: 'white'
+    name   = new PIXI.Text name, font: '14px Avenir Next Condensed', fill: 'white'
     name.x = -( name.width / 2 )
     name.y = -45
-    name.resolution = 100
 
-    health = new PIXI.Text ( health or 100 ), font: '14px Avenir Next Condensed', fill: 'black'
-    health.x = -( health.width / 2 )
-    health.y = -( health.height / 2 )
+    health      = new PIXI.Text ( health or 100 ), font: '14px Avenir Next Condensed', fill: 'black'
+    health.x    = -( health.width / 2 )
+    health.y    = -( health.height / 2 )
     health.type = 'health'
 
-    user       = new PIXI.Container
-    user._id   = id
-    user.type  = 'player'
-    user.x     = x or @renderer.width / 2
-    user.y     = y or @renderer.height / 2
+    user      = new PIXI.Container
+    user._id  = id
+    user.type = 'player'
+    user.x    = x or @renderer.width / 2
+    user.y    = y or @renderer.height / 2
 
     user.addChild circle
     user.addChild cannon
@@ -188,10 +187,10 @@ class Scene
 
     return unless @user
 
+    speed = 7.5
+
     x = @user.position.x
     y = @user.position.y
-
-    speed = 7.5
 
     x -= speed if Session.get 'move:left'
     y -= speed if Session.get 'move:up'
@@ -367,7 +366,7 @@ class Scene
 
     @removeDeadPlayer()
 
-  animate: ( time ) =>
+  animate: =>
 
     @stats.begin()
 
