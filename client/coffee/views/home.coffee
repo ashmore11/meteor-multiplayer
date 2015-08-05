@@ -14,7 +14,7 @@ Template.home.helpers
 
   health: ->
 
-    return Players.findOne( username: Session.get('user') ).health
+    return Players.findOne( username: Session.get('user') )?.health
 
 Template.home.events
 
@@ -47,7 +47,7 @@ Template.home.events
 
       else
 
-        color = randomColor( luminosity: 'bright' )
+        color = randomColor( luminosity: 'light' )
         color = color.split('#')[1]
 
         Meteor.call 'createPlayer', name, color
@@ -60,14 +60,11 @@ Template.home.rendered = =>
 
 class Scene
 
+  win:
+    w: $(window).width()
+    h: $(window).height()
+
   constructor: ( @el ) ->
-
-    @stats = new Stats
-    @stats.setMode( 0 )
-
-    @stats.domElement.style.position = 'absolute'
-    @stats.domElement.style.left = '0px'
-    @stats.domElement.style.top = '0px'
 
     @renderer = new PIXI.WebGLRenderer 1500, 1000, antialias: true
     @stage    = new PIXI.Container
@@ -75,18 +72,31 @@ class Scene
     PIXI.RESOLUTION = window.devicePixelRatio
 
     @el.append @renderer.view
-    @el.append @stats.domElement
 
     $( document ).on 'keydown keyup', @getKeyEvents
     $( document ).on 'mousemove', @getRotateAngle
     $( document ).on 'mousedown', @createBullet
 
+    @createStats()
     @addCurrentUsers()
     @createUsers()
     @removeUsers()
     @addBulletsToStage()
     @removeBulletsFromStage()
+    @updatePlayersPosition()
+    @updatePlayersRotation()
     @animate()
+
+  createStats: ->
+
+    @stats = new Stats
+    @stats.setMode( 0 )
+
+    @stats.domElement.style.position = 'absolute'
+    @stats.domElement.style.left     = '0px'
+    @stats.domElement.style.top      = '0px'
+
+    @el.append @stats.domElement
 
   getKeyEvents: ( event ) =>
 
@@ -119,13 +129,13 @@ class Scene
     pageX = event.pageX - @el.offset().left
     pageY = event.pageY - @el.offset().top
 
-    x = pageX - @user.position.x
-    y = pageY - @user.position.y
+    x = pageX - @player.x
+    y = pageY - @player.y
 
-    angle   = Math.atan2( x, -y ) * ( 180 / Math.PI )
-    radians = angle * Math.PI / 180
+    angle    = Math.atan2( x, -y ) * ( 180 / Math.PI )
+    rotation = angle * Math.PI / 180
 
-    Meteor.call 'updateRotation', @user._id, radians
+    PlayerStream.emit 'client:send:rotation', @user._id, rotation
 
   createUsers: ->
 
@@ -138,8 +148,6 @@ class Scene
     PlayerStream.on 'player:destroyed', ( id ) =>
 
       object = @getObjectFromStage( id )
-
-      return unless object
 
       object.removeChildren()
       @stage.removeChild object
@@ -190,14 +198,14 @@ class Scene
 
     @stage.addChild user
 
-  updatePlayerPosition: ->
+  updatePosition: ->
 
-    return unless @user
+    return unless @player
 
     speed = 7.5
 
-    x = @user.position.x
-    y = @user.position.y
+    x = @player.x
+    y = @player.y
 
     x -= speed if Session.get 'move:left'
     y -= speed if Session.get 'move:up'
@@ -214,26 +222,46 @@ class Scene
       x: x
       y: y
 
-    Meteor.call 'updatePosition', @user._id, pos
+    PlayerStream.emit 'client:send:position', @user._id, pos
+
+  updatePlayersPosition: ->
+
+    PlayerStream.on 'server:send:position', ( id, pos ) =>
+
+      player = @getObjectFromStage( id )
+
+      player.x = pos.x
+      player.y = pos.y
+
+  updatePlayersRotation: ->
+
+    PlayerStream.on 'server:send:rotation', ( id, rotation ) =>
+
+      player = @getObjectFromStage( id )
+
+      for child in player.children
+
+        if child.type is 'cannon'
+
+          child.rotation = rotation
 
   createBullet: ( event ) =>
 
-    return unless @user
+    return unless @player
 
     event.preventDefault()
 
     pageX = event.pageX - @el.offset().left
     pageY = event.pageY - @el.offset().top
-    pos   = @user.position
 
-    angle   = Math.atan2( pageX - pos.x, - ( pageY - pos.y ) ) * ( 180 / Math.PI )
+    angle   = Math.atan2( pageX - @player.x, - ( pageY - @player.y ) ) * ( 180 / Math.PI )
     radians = angle * Math.PI / 180
     speed   = 1000
 
     params =
       user : @user._id
-      x    : @user.position.x
-      y    : @user.position.y
+      x    : @player.x
+      y    : @player.y
       vx   : Math.cos( radians ) * speed / 60
       vy   : Math.sin( radians ) * speed / 60
       color: @user.color
@@ -269,8 +297,6 @@ class Scene
 
       object = @getObjectFromStage( id )
 
-      return unless object
-
       object.removeChildren()
       @stage.removeChild object
 
@@ -283,24 +309,17 @@ class Scene
         object.x = object.x + object.direction.y
         object.y = object.y - object.direction.x
 
-  updateObjectsOnStage: ->
+  updatePlayersHealth: ->
 
     for object in @stage.children
 
-      if object?.type is 'player'
+      if object.type is 'player'
 
         player = Players.findOne( _id: object._id )
 
         return unless player
 
-        object.x = player.position.x
-        object.y = player.position.y
-
         for child in object.children
-          
-          if child.type is 'cannon'
-          
-            child.rotation = player.rotation
 
           if child.type is 'health'
 
@@ -310,10 +329,10 @@ class Scene
 
   collisionDetection: ->
 
-    return unless @user
+    return unless @player
 
-    px = @user.position.x
-    py = @user.position.y
+    px = @player.x
+    py = @player.y
 
     for object in @stage.children
 
@@ -361,13 +380,14 @@ class Scene
 
   update: ->
 
-    @user = Players.findOne( username: Session.get 'user' )
+    @user   = Players.findOne( username: Session.get 'user' )
+    @player = @getObjectFromStage( @user?._id )
 
-    @updatePlayerPosition()
+    @updatePosition()
 
     @updateBullets()
 
-    @updateObjectsOnStage()
+    @updatePlayersHealth()
 
     @collisionDetection()
 

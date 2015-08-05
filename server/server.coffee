@@ -7,6 +7,14 @@ PlayerStream.permissions.read ( eventName )  -> return true
 BulletStream.permissions.write ( eventName ) -> return true
 BulletStream.permissions.read ( eventName )  -> return true
 
+PlayerStream.on 'client:send:position', ( id, pos ) ->
+
+  PlayerStream.emit 'server:send:position', id, pos
+
+PlayerStream.on 'client:send:rotation', ( id, rotation ) ->
+
+  PlayerStream.emit 'server:send:rotation', id, rotation
+
 ###
 Listen for updates in the Players collection
 ###
