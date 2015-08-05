@@ -9,7 +9,6 @@ class @AppRouter
 		waitOn: ->
 			
 			Meteor.subscribe 'players'
-			Meteor.subscribe 'bullets'
 
 	Router.map ->
 

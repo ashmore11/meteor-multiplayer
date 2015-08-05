@@ -8,10 +8,6 @@ Template.home.helpers
 
     return Players.find {}, sort: health: -1
 
-  bullets: ->
-
-    return Bullets.find().count()
-
   health: ->
 
     return Players.findOne( username: Session.get('user') )?.health
@@ -66,16 +62,17 @@ class Scene
 
   constructor: ( @el ) ->
 
-    @renderer = new PIXI.WebGLRenderer 1500, 1000, antialias: true
+    @renderer = new PIXI.WebGLRenderer @win.w, @win.h, antialias: true
     @stage    = new PIXI.Container
 
-    PIXI.RESOLUTION = window.devicePixelRatio
+    @renderer.resize @win.w, @win.h
 
     @el.append @renderer.view
 
     $( document ).on 'keydown keyup', @getKeyEvents
     $( document ).on 'mousemove', @getRotateAngle
     $( document ).on 'mousedown', @createBullet
+    $(  window  ).on 'resize', @resize
 
     @createStats()
     @addCurrentUsers()
@@ -126,11 +123,8 @@ class Scene
 
     return unless @user
 
-    pageX = event.pageX - @el.offset().left
-    pageY = event.pageY - @el.offset().top
-
-    x = pageX - @player.x
-    y = pageY - @player.y
+    x = event.pageX - @player.x
+    y = event.pageY - @player.y
 
     angle    = Math.atan2( x, -y ) * ( 180 / Math.PI )
     rotation = angle * Math.PI / 180
@@ -160,12 +154,10 @@ class Scene
       name   = player.username
       color  = player.color
       health = player.health
-      x      = player.position.x
-      y      = player.position.y
 
-      @generatePlayer id, name, color, health, x, y
+      @generatePlayer id, name, color, health
 
-  generatePlayer: ( id, name, color, health, x, y ) ->
+  generatePlayer: ( id, name, color, health ) ->
 
     circle = new PIXI.Graphics
     circle.beginFill "0x#{color}", 1
@@ -188,8 +180,8 @@ class Scene
     user      = new PIXI.Container
     user._id  = id
     user.type = 'player'
-    user.x    = x or @renderer.width / 2
-    user.y    = y or @renderer.height / 2
+    user.x    = @renderer.width / 2
+    user.y    = @renderer.height / 2
 
     user.addChild circle
     user.addChild cannon
@@ -219,8 +211,8 @@ class Scene
     if y > @renderer.height - 20 then y = @renderer.height - 20
 
     pos =
-      x: x
-      y: y
+      x: x / @win.w * 100
+      y: y / @win.h * 100
 
     PlayerStream.emit 'client:send:position', @user._id, pos
 
@@ -230,14 +222,18 @@ class Scene
 
       player = @getObjectFromStage( id )
 
-      player.x = pos.x
-      player.y = pos.y
+      return unless player
+
+      player.x = pos.x * @win.w / 100
+      player.y = pos.y * @win.h / 100
 
   updatePlayersRotation: ->
 
     PlayerStream.on 'server:send:rotation', ( id, rotation ) =>
 
       player = @getObjectFromStage( id )
+
+      return unless player
 
       for child in player.children
 
@@ -251,51 +247,60 @@ class Scene
 
     event.preventDefault()
 
-    pageX = event.pageX - @el.offset().left
-    pageY = event.pageY - @el.offset().top
-
-    angle   = Math.atan2( pageX - @player.x, - ( pageY - @player.y ) ) * ( 180 / Math.PI )
-    radians = angle * Math.PI / 180
-    speed   = 1000
-
     params =
-      user : @user._id
-      x    : @player.x
-      y    : @player.y
-      vx   : Math.cos( radians ) * speed / 60
-      vy   : Math.sin( radians ) * speed / 60
-      color: @user.color
+      _id   : Random.id()
+      user  : @user._id
+      mx    : event.pageX / @win.w * 100
+      my    : event.pageY / @win.h * 100
+      x     : @player.x / @win.w * 100
+      y     : @player.y / @win.h * 100
+      color : @user.color
 
-    Meteor.call 'createBullet', params
+    BulletStream.emit 'client:create:bullet', params
 
   addBulletsToStage: ->
 
-    BulletStream.on 'bullet:created', ( id, doc ) =>
+    BulletStream.on 'server:create:bullet', ( params ) =>
 
       circle = new PIXI.Graphics
 
-      circle.beginFill "0x#{doc.color}", 1
+      circle.beginFill "0x#{params.color}", 1
       circle.drawCircle 0, 0, 2
 
       bullet      = new PIXI.Container
-      bullet.x    = doc.position.x
-      bullet.y    = doc.position.y
-      bullet._id  = id
-      bullet.user = doc.user
+      bullet._id  = params._id
+      bullet.user = params.user
       bullet.type = 'bullet'
 
+      bullet.x  = params.x  * @win.w / 100
+      bullet.y  = params.y  * @win.h / 100
+      bullet.mx = params.mx * @win.w / 100
+      bullet.my = params.my * @win.h / 100
+
+      x =  ( bullet.mx - bullet.x )
+      y = -( bullet.my - bullet.y )
+
+      angle   = Math.atan2( x, y ) * ( 180 / Math.PI )
+      radians = angle * Math.PI / 180
+
+      width  = @win.h * @win.w / ( @win.h * 100 )
+      height = @win.w * @win.h / ( @win.w * 100 )
+      speed  = ( width + height ) / 2
+
       bullet.direction =
-        x: doc.direction.x
-        y: doc.direction.y
+        x: Math.cos( radians ) * speed
+        y: Math.sin( radians ) * speed
 
       bullet.addChild circle
       @stage.addChild bullet
 
   removeBulletsFromStage: ->
 
-    BulletStream.on 'bullet:destroyed', ( id ) =>
+    BulletStream.on 'server:destroy:bullet', ( id ) =>
 
       object = @getObjectFromStage( id )
+
+      return unless object
 
       object.removeChildren()
       @stage.removeChild object
@@ -306,8 +311,8 @@ class Scene
 
       if object.type is 'bullet'
 
-        object.x = object.x + object.direction.y
-        object.y = object.y - object.direction.x
+        object.x += object.direction.y
+        object.y -= object.direction.x
 
   updatePlayersHealth: ->
 
@@ -336,7 +341,7 @@ class Scene
 
     for object in @stage.children
 
-      if object.type is 'bullet'
+      if object?.type is 'bullet'
 
         ox = object.x
         oy = object.y
@@ -346,21 +351,21 @@ class Scene
 
           if ox > px - 20 and ox < px + 20 and oy > py - 20 and oy < py + 20
 
-            # Increase the health of the player who shot the bullet by 5
+            # Remove bullet from the clients ui
+            BulletStream.emit 'client:destroy:bullet', object._id
+
+            # Increase health of the player who shot the bullet by 5
             Meteor.call 'increaseHealth', object.user
 
-            # Decrease the health of the player who was shot by 10
+            # Decrease health of the player who was shot by 10
             Meteor.call 'decreaseHealth', @user._id
-
-            # Remove the bullet from the collection and clients ui
-            Meteor.call 'removeBullet', object._id
 
         else
 
           # Remove any bullets that leave the clients ui
           if ox > @renderer.width or ox < 0 or oy > @renderer.height or oy < 0
 
-            Meteor.call 'removeBullet', object._id
+            BulletStream.emit 'client:destroy:bullet', object._id
 
   removeDeadPlayer: ->
 
@@ -377,6 +382,12 @@ class Scene
       if child._id is id
 
         return child
+
+  resize: =>
+
+    @renderer.resize @win.w, @win.h
+
+    console.log 'resizing'
 
   update: ->
 

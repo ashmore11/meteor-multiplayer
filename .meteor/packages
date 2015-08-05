@@ -10,13 +10,4 @@ mquandalle:jade
 underscore
 jquery
 iron:router
-http
-service-configuration
-accounts-ui-unstyled
-accounts-base
-accounts-password
-mdg:geolocation
-chrismbeckett:fontawesome4
-fastclick
-accounts-facebook
 arunoda:streams

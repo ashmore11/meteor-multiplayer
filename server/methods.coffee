@@ -49,22 +49,3 @@ Meteor.methods
       $inc: 
 
         health: -10
-
-  createBullet: ( params ) ->
-
-    Bullets.insert
-
-      user : params.user
-      color: params.color
-
-      position:
-        x: params.x
-        y: params.y
-
-      direction:
-        x: params.vx
-        y: params.vy
-
-  removeBullet: ( id ) ->
-
-    Bullets.remove id
