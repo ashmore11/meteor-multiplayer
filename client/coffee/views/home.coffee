@@ -263,7 +263,6 @@ class Scene
     BulletStream.on 'server:create:bullet', ( params ) =>
 
       circle = new PIXI.Graphics
-
       circle.beginFill "0x#{params.color}", 1
       circle.drawCircle 0, 0, 2
 
@@ -386,8 +385,6 @@ class Scene
   resize: =>
 
     @renderer.resize @win.w, @win.h
-
-    console.log 'resizing'
 
   update: ->
 
